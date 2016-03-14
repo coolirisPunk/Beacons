@@ -23,7 +23,7 @@ public class BeaconData extends BaseModel {
     long id;
 
     @Column
-    int userid;
+    String userid;
 
     @Column
     int beaconid;
@@ -41,11 +41,11 @@ public class BeaconData extends BaseModel {
         return id;
     }
 
-    public int getUserid() {
+    public String getUserid() {
         return userid;
     }
 
-    public void setUserid(int userid) {
+    public void setUserid(String userid) {
         this.userid = userid;
     }
 

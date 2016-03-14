@@ -85,8 +85,8 @@ public class LoginActivity extends AppCompatActivity  {
        // populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
-        mUsernameView.setText("germanpunk");
-        mPasswordView.setText("cooliris");
+        //mUsernameView.setText("germanpunk");
+        //mPasswordView.setText("cooliris");
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -165,9 +165,7 @@ public class LoginActivity extends AppCompatActivity  {
                             Log.d("key", object.optString("key"));
                             String key = object.optString("key");
                                 getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("hasKey", key).commit();
-
                             getUserProfile(key);
-
                         }
                         else {
                             mPasswordView.setError(getString(R.string.error_incorrect_password));
@@ -180,9 +178,7 @@ public class LoginActivity extends AppCompatActivity  {
                         mPasswordView.requestFocus();
                         showProgress(false);
                     }
-
                 }
-
 
             }, new Response.ErrorListener() {
                 @Override
@@ -316,9 +312,11 @@ public class LoginActivity extends AppCompatActivity  {
                 try {
                     JSONObject object = new JSONObject(response);
                     Log.d("response",object.toString());
-                    if (object.has("id")){
-                        Log.d("Userid", object.optString("id"));
-                        String userid = object.optString("id");
+                    if (object.has("user_profile")){
+                        //Log.d("Userid", object.optString("id"));
+                        //String userid = object.optString("id");
+                        JSONObject anSecondEntry = object.getJSONObject("user_profile");
+                        String userid = anSecondEntry.optString("id");
                         getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("Userid", userid).commit();
                         Intent myIntent = new Intent(getApplicationContext(), RangingActivity.class);
                         myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

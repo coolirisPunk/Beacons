@@ -78,7 +78,6 @@ public class RangingActivity extends Activity implements BeaconConsumer {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ranging);
-
         verifyBluetooth();
         userDetails = getApplicationContext().getSharedPreferences("PREFERENCE", MODE_PRIVATE);
         Ukey = userDetails.getString("hasKey", "");
@@ -173,18 +172,16 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     Double v = firstBeacon.getDistance() / s;
                     Double hv = v * 3.6;
                     Date date = Calendar.getInstance().getTime();
-
                     String fechaevento = sdf.format(date);
                     Log.d("fechaevento", fechaevento);
                     logToDisplay("\n\n" + ts + " The first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away. " + fechaevento + "Time " + hv + " Velocidad");
                     String beaconid = firstBeacon.getId2().toString();
-
                     final BeaconData beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.bid.eq(beaconid)).querySingle();
                     if (beaconData == null) {
                         Log.d("queryset", "Null");
                         BeaconData newbeacondata = new BeaconData();
                         newbeacondata.setBeaconid(Integer.parseInt(beaconid));
-                        newbeacondata.setUserid(Integer.parseInt(UId));
+                        newbeacondata.setUserid(UId);
                         newbeacondata.setDate(fechaevento);
                         newbeacondata.setDistance(firstBeacon.getDistance());
                         newbeacondata.setUploaded(0);
@@ -215,8 +212,6 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 TextView editText = (TextView) RangingActivity.this.findViewById(R.id.rangingText);
                 editText.setMovementMethod(new ScrollingMovementMethod());
                 editText.append(line + "\n");
-
-
             }
         });
     }
@@ -269,17 +264,18 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     //Log.d("internet", "jajajaja");
                     List<BeaconData> beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.buploaded.eq(0)).queryList();
                     Log.d("BeaconDataList", beaconData.toString());
+                    try {
                     for (BeaconData beaconitem: beaconData){
                         final BeaconData bi = new Select().from(BeaconData.class).where(BeaconData.idregister.eq(beaconitem.getId())).querySingle();
-                        final String userid = String.valueOf(beaconitem.getUserid());
+                        final String userid = beaconitem.getUserid();
                         final String beaconid = String.valueOf(beaconitem.getBeaconid());
                         final String uploadedbeaconitem = String.valueOf(beaconitem.getUploaded());
                         final String distance = String.valueOf(beaconitem.getDistance());
                         final String date = String.valueOf(bi.getDate());
-                        Log.d("queryfield", String.valueOf(bi.getId()));
-                        Log.d("queryfield", String.valueOf(bi.getBeaconid()));
-                        Log.d("queryfield", String.valueOf(bi.getUserid()));
-                        Log.d("queryfield", String.valueOf(bi.getDistance()));
+                        Log.d("queryfieldgetId", String.valueOf(bi.getId()));
+                        Log.d("queryfieldgetBeaconid", String.valueOf(bi.getBeaconid()));
+                        Log.d("queryfieldgetUserid", String.valueOf(bi.getUserid()));
+                        Log.d("queryfieldgetDistance", String.valueOf(bi.getDistance()));
                         Log.d("queryfield", bi.getDate());
                         Log.d("queryfield", String.valueOf(beaconitem.getUploaded()));
                         request = new StringRequest(Request.Method.POST,RALLY_MAYA_BEACONSREGISTER_JSON_API_URL, new Response.Listener<String>() {
@@ -328,6 +324,13 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
                         BeaconReferenceApplication.getInstance().addToRequestQueue(request);
 
+
+                        }
+                        Thread.sleep(9000);
+
+                    }
+                    catch (InterruptedException ie) {
+                        //Handle exception
                     }
 
                     //Log.d("uploaded",beaconData.toString());
