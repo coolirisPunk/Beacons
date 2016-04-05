@@ -47,6 +47,7 @@ import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.punkmkt.beacons.databases.BeaconData;
 import com.punkmkt.beacons.utils.AuthRequest;
@@ -69,8 +70,8 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
-    StringRequest request;
-    private String RALLY_MAYA_BEACONSREGISTER_JSON_API_URL = "http://192.168.1.198:8000/api/beacons/registrobeacons/";
+    JsonObjectRequest request;
+    private String RALLY_MAYA_BEACONSREGISTER_JSON_API_URL = "http://rallymaya.punklabs.ninja/api/beacons/registrobeacons/";
     SharedPreferences userDetails;
     String Ukey;
     String UId;
@@ -157,6 +158,14 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
                 if (beacons.size() > 0) {
+                    //beacons.iterator().next().//unicamente  Los siguientes
+
+                    //      cada beacon. debera leeer a un cierto tiempo.   horas ideales de lectura del evento.
+
+                    // fecha y hora de lectura por beacon para precaucion.
+
+                    //
+
                     Long tsLong = System.currentTimeMillis();
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
                     Date resultdate = new Date(tsLong);
@@ -177,6 +186,9 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     logToDisplay("\n\n" + ts + " The first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away. " + fechaevento + "Time " + hv + " Velocidad");
                     String beaconid = firstBeacon.getId2().toString();
                     final BeaconData beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.bid.eq(beaconid)).querySingle();
+                    //si la hora del telefono con la hora del registro del beacon. definir una hora de rango de diferencia de un beacon en un punto con el mismo beacon en otro punto.
+
+                    //o resetear la base de datos a media noche e ir sacando los dias del evento.
                     if (beaconData == null) {
                         Log.d("queryset", "Null");
                         BeaconData newbeacondata = new BeaconData();
@@ -278,16 +290,30 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                         Log.d("queryfieldgetDistance", String.valueOf(bi.getDistance()));
                         Log.d("queryfield", bi.getDate());
                         Log.d("queryfield", String.valueOf(beaconitem.getUploaded()));
-                        request = new StringRequest(Request.Method.POST,RALLY_MAYA_BEACONSREGISTER_JSON_API_URL, new Response.Listener<String>() {
+
+
+
+                        JSONObject js = new JSONObject();
+
+                        try {
+
+                            js.put("userid", userid);
+                            js.put("beaconid", beaconid);
+                            js.put("uploaded", uploadedbeaconitem);
+                            js.put("distance", distance);
+                            js.put("date", date);
+                        }catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        request = new JsonObjectRequest(Request.Method.POST,RALLY_MAYA_BEACONSREGISTER_JSON_API_URL,js, new Response.Listener<JSONObject>() {
                             @Override
-                            public void onResponse(String response) {
-                                Log.d("request",response);
+                            public void onResponse(JSONObject response) {
+                                Log.d("Response",response.toString());
                                 try {
-                                    JSONObject object = new JSONObject(response);
-                                    Log.d("response",object.toString());
                                     bi.setUploaded(1);
                                     bi.update();
-                                } catch (JSONException e) {
+                                } catch (Exception e) {
                                     e.printStackTrace();
                                     //alert con error
                                 }
@@ -300,22 +326,14 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                             }
                         }){
                             @Override
-                            protected Map<String,String> getParams(){
-                                Map<String,String> params = new HashMap<String, String>();
-                                params.put("userid",userid);
-                                params.put("beaconid",beaconid);
-                                params.put("uploaded",uploadedbeaconitem);
-                                params.put("distance",distance);
-                                params.put("date",date);
-                                return params;
-                            }
-                            @Override
                             public Map<String, String> getHeaders() throws AuthFailureError {
                                 Map<String,String> params = new HashMap<String, String>();
-                                params.put("Content-Type","application/x-www-form-urlencoded");
+                                params.put("Content-Type","application/json; charset=utf-8");
+                                Log.d("log", Ukey);
                                 params.put("Authorization", "Token " + Ukey);
                                 return params;
                             }
+
                         };
                         request.setRetryPolicy(new DefaultRetryPolicy(
                                 9000,
@@ -323,7 +341,6 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
                         BeaconReferenceApplication.getInstance().addToRequestQueue(request);
-
 
                         }
                         Thread.sleep(9000);

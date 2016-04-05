@@ -36,6 +36,8 @@ import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.punkmkt.beacons.utils.AuthRequest;
 
@@ -71,11 +73,11 @@ public class LoginActivity extends AppCompatActivity  {
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
+    private String RALLY_MAYA_LOGIN_JSON_API_URL = "http://rallymaya.punklabs.ninja/api/auth/rest-auth/login/";
 
-    private String RALLY_MAYA_LOGIN_JSON_API_URL = "http://192.168.1.198:8000/api/auth/rest-auth/login/";
-    private String RALLY_MAYA_USERPROFILE_JSON_API_URL = "http://192.168.1.198:8000/api/auth/rest-auth/user/";
+    private String RALLY_MAYA_USERPROFILE_JSON_API_URL = "http://rallymaya.punklabs.ninja/api/auth/rest-auth/user/";
 
-
+    JsonObjectRequest jsonObjReq;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,8 +87,8 @@ public class LoginActivity extends AppCompatActivity  {
        // populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
-        //mUsernameView.setText("germanpunk");
-        //mPasswordView.setText("cooliris");
+        mUsernameView.setText("germanpunk");
+        mPasswordView.setText("cooliris");
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -153,64 +155,73 @@ public class LoginActivity extends AppCompatActivity  {
             // Show a progress spinner, and kick off a background task to
             // perform the user login attempt.
             showProgress(true);
+            JSONObject js = new JSONObject();
 
-            request = new StringRequest(Request.Method.POST,RALLY_MAYA_LOGIN_JSON_API_URL, new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    Log.d("request",response);
-                    try {
-                        JSONObject object = new JSONObject(response);
-                        if (object.has("key")){
-                            showProgress(false);
-                            Log.d("key", object.optString("key"));
-                            String key = object.optString("key");
-                                getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("hasKey", key).commit();
-                            getUserProfile(key);
-                        }
-                        else {
-                            mPasswordView.setError(getString(R.string.error_incorrect_password));
-                            mPasswordView.requestFocus();
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        //alert con error
-                        mPasswordView.setError(getString(R.string.error_incorrect_password));
-                        mPasswordView.requestFocus();
-                        showProgress(false);
-                    }
-                }
+            try {
 
-            }, new Response.ErrorListener() {
+                js.put("username", username);
+                js.put("password", password);
+            }catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+
+             jsonObjReq = new JsonObjectRequest(Request.Method.POST,
+                    RALLY_MAYA_LOGIN_JSON_API_URL, js,
+                    new Response.Listener<JSONObject>() {
+
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            try {
+                                Log.d("Response",response.toString());
+                                JSONObject object = response;
+                                if (object.has("key")){
+                                    showProgress(false);
+                                    Log.d("key", object.optString("key"));
+                                    String key = object.optString("key");
+                                    getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("hasKey", key).commit();
+                                    getUserProfile(key);
+                                }
+                                else {
+                                    mPasswordView.setError(getString(R.string.error_incorrect_password));
+                                    mPasswordView.requestFocus();
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                //alert con error
+                                mPasswordView.setError(getString(R.string.error_incorrect_password));
+                                mPasswordView.requestFocus();
+                                showProgress(false);
+                            }
+                        }
+                    }, new Response.ErrorListener() {
+
                 @Override
                 public void onErrorResponse(VolleyError error) {
-                    Log.d("request",error.toString());
+                    VolleyLog.d("V", "Error: " + error.getMessage());
                     //alert con error
                     mPasswordView.setError(getString(R.string.error_incorrect_password));
                     mPasswordView.requestFocus();
                     showProgress(false);
                 }
-            }){
-                @Override
-                protected Map<String,String> getParams(){
-                    Map<String,String> params = new HashMap<String, String>();
-                    params.put("username",username);
-                    params.put("password",password);
-                    return params;
-                }
+            }) {
 
+                /**
+                 * Passing some request headers
+                 */
                 @Override
                 public Map<String, String> getHeaders() throws AuthFailureError {
-                    Map<String,String> params = new HashMap<String, String>();
-                    params.put("Content-Type","application/x-www-form-urlencoded");
-                    return params;
+                    HashMap<String, String> headers = new HashMap<String, String>();
+                    headers.put("Content-Type", "application/json; charset=utf-8");
+                    return headers;
                 }
             };
 
-            request.setRetryPolicy(new DefaultRetryPolicy(
+            jsonObjReq.setRetryPolicy(new DefaultRetryPolicy(
                     9000,
                     DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
                     DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-            BeaconReferenceApplication.getInstance().addToRequestQueue(request);
+            BeaconReferenceApplication.getInstance().addToRequestQueue(jsonObjReq);
             //mAuthTask = new UserLoginTask(username, password);
             //mAuthTask.execute((Void) null);
         }
@@ -305,51 +316,67 @@ public class LoginActivity extends AppCompatActivity  {
     }
 
     private void getUserProfile(final String Ukey) {
-        request = new StringRequest(Request.Method.GET,RALLY_MAYA_USERPROFILE_JSON_API_URL, new Response.Listener<String>() {
-            @Override
-            public void onResponse(String response) {
-                Log.d("request",response);
-                try {
-                    JSONObject object = new JSONObject(response);
-                    Log.d("response",object.toString());
-                    if (object.has("user_profile")){
-                        //Log.d("Userid", object.optString("id"));
-                        //String userid = object.optString("id");
-                        JSONObject anSecondEntry = object.getJSONObject("user_profile");
-                        String userid = anSecondEntry.optString("id");
-                        getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("Userid", userid).commit();
-                        Intent myIntent = new Intent(getApplicationContext(), RangingActivity.class);
-                        myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        getApplicationContext().startActivity(myIntent);
+        JSONObject js = new JSONObject();
+        try {
+            js.put("token", Ukey);
+        }catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        jsonObjReq = new JsonObjectRequest(Request.Method.GET,
+                RALLY_MAYA_USERPROFILE_JSON_API_URL,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONObject object = response;
+                            Log.d("response",object.toString());
+                            if (object.has("user_profile")){
+                                //Log.d("Userid", object.optString("id"));
+                                //String userid = object.optString("id");
+                                JSONObject anSecondEntry = object.getJSONObject("user_profile");
+                                String userid = anSecondEntry.optString("id");
+                                getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("Userid", userid).commit();
+                                Intent myIntent = new Intent(getApplicationContext(), RangingActivity.class);
+                                myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                getApplicationContext().startActivity(myIntent);
+                            }
+                            else {
+                                Log.d("response","No userid.");
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            //alert con error
+                        }
                     }
-                    else {
-                        Log.d("response","No userid.");
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                    //alert con error
-                }
-            }
-        }, new Response.ErrorListener() {
+                }, new Response.ErrorListener() {
+
             @Override
             public void onErrorResponse(VolleyError error) {
-                Log.d("request", error.toString());
+                VolleyLog.d("V", "Error: " + error.getMessage());
                 //alert con error
+                mPasswordView.setError(getString(R.string.error_incorrect_password));
+                mPasswordView.requestFocus();
+                showProgress(false);
             }
-        }){
+        }) {
+
+            /**
+             * Passing some request headers
+             */
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String,String> params = new HashMap<String, String>();
-                params.put("Content-Type","application/x-www-form-urlencoded");
-                params.put("Authorization", "Token " + Ukey);
-                return params;
+                HashMap<String, String> headers = new HashMap<String, String>();
+                headers.put("Content-Type", "application/json; charset=utf-8");
+                headers.put("Authorization", "Token " + Ukey);
+                return headers;
             }
         };
-        request.setRetryPolicy(new DefaultRetryPolicy(
+        jsonObjReq.setRetryPolicy(new DefaultRetryPolicy(
                 9000,
                 DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
                 DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-        BeaconReferenceApplication.getInstance().addToRequestQueue(request);
+        BeaconReferenceApplication.getInstance().addToRequestQueue(jsonObjReq);
     }
 }
 
