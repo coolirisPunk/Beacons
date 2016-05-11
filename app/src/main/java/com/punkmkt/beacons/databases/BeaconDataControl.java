@@ -2,18 +2,15 @@ package com.punkmkt.beacons.databases;
 
 import com.raizlabs.android.dbflow.annotation.Column;
 import com.raizlabs.android.dbflow.annotation.PrimaryKey;
-import com.raizlabs.android.dbflow.annotation.Table;
 import com.raizlabs.android.dbflow.sql.language.property.Property;
 import com.raizlabs.android.dbflow.structure.BaseModel;
 
 /**
- * Created by DaniPunk on 02/03/16.
+ * Created by DaniPunk on 04/05/16.
  */
-@Table(database = AppDatabase.class,name="BeaconData")
+public class BeaconDataControl extends BaseModel {
 
-public class BeaconData extends BaseModel {
-
-    public static final Property<String> bid = new Property<String>(BeaconData.class, "beaconid");
+    public static final Property<String> pid = new Property<String>(BeaconData.class, "participanteid");
     public static final Property<Integer> buploaded = new Property<Integer>(BeaconData.class, "uploaded");
     public static final Property<Long> idregister = new Property<Long>(BeaconData.class, "id");
 
@@ -23,14 +20,13 @@ public class BeaconData extends BaseModel {
     long id;
 
     @Column
-    String userid;
+    String phoneid;
+
+    @Column
+    int participanteid;
 
     @Column
     int beaconid;
-
-
-    @Column
-    int readed;
 
     @Column
     int uploaded;
@@ -45,21 +41,30 @@ public class BeaconData extends BaseModel {
         return id;
     }
 
-    public String getUserid() {
-        return userid;
+    public String setPhoneId() {
+        return phoneid;
     }
 
-    public void setUserid(String userid) {
-        this.userid = userid;
+    public void setPhoneId(String phoneid) {
+        this.phoneid = phoneid;
     }
 
-    public int getBeaconid() {
+    public int getParticipanteId() {
+        return participanteid;
+    }
+
+    public void setParticipanteId(int participanteid) {
+        this.participanteid = participanteid;
+    }
+
+    public int getBeaconId() {
         return beaconid;
     }
 
-    public void setBeaconid(int beaconid) {
+    public void setBeaconId(int beaconid) {
         this.beaconid = beaconid;
     }
+
 
     public int getUploaded() {
         return uploaded;
@@ -76,15 +81,6 @@ public class BeaconData extends BaseModel {
     public void setDistance(double distance) {
         this.distance = distance;
     }
-
-    public int getReaded() {
-        return readed;
-    }
-
-    public void setReaded(int readed) {
-        this.readed = readed;
-    }
-
 
     public String getDate() {
         return date;

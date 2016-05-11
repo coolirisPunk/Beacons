@@ -87,8 +87,8 @@ public class LoginActivity extends AppCompatActivity  {
        // populateAutoComplete();
 
         mPasswordView = (EditText) findViewById(R.id.password);
-        mUsernameView.setText("germanpunk");
-        mPasswordView.setText("cooliris");
+        mUsernameView.setText("AADM84");
+        mPasswordView.setText("mirally3");
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -314,7 +314,6 @@ public class LoginActivity extends AppCompatActivity  {
             showProgress(false);
         }
     }
-
     private void getUserProfile(final String Ukey) {
         JSONObject js = new JSONObject();
         try {
@@ -336,6 +335,7 @@ public class LoginActivity extends AppCompatActivity  {
                                 //String userid = object.optString("id");
                                 JSONObject anSecondEntry = object.getJSONObject("user_profile");
                                 String userid = anSecondEntry.optString("id");
+                                Log.d("user",userid);
                                 getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putString("Userid", userid).commit();
                                 Intent myIntent = new Intent(getApplicationContext(), RangingActivity.class);
                                 myIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

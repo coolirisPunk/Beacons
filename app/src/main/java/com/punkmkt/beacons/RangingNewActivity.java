@@ -1,25 +1,11 @@
 package com.punkmkt.beacons;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
@@ -30,19 +16,6 @@ import android.os.RemoteException;
 import android.text.format.Time;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.widget.EditText;
-
-import org.altbeacon.beacon.AltBeacon;
-import org.altbeacon.beacon.Beacon;
-import org.altbeacon.beacon.BeaconConsumer;
-import org.altbeacon.beacon.BeaconManager;
-import org.altbeacon.beacon.BeaconParser;
-import org.altbeacon.beacon.RangeNotifier;
-import org.altbeacon.beacon.Region;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.content.Context;
 import android.widget.TextView;
 
 import com.android.volley.AuthFailureError;
@@ -51,15 +24,36 @@ import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.StringRequest;
 import com.punkmkt.beacons.databases.BeaconData;
+import com.punkmkt.beacons.databases.BeaconDataControl;
 import com.punkmkt.beacons.databases.BeaconModel;
-import com.punkmkt.beacons.utils.AuthRequest;
 import com.punkmkt.beacons.utils.NetworkUtils;
 import com.raizlabs.android.dbflow.sql.language.SQLite;
 import com.raizlabs.android.dbflow.sql.language.Select;
 
-public class RangingActivity extends Activity implements BeaconConsumer {
+import org.altbeacon.beacon.Beacon;
+import org.altbeacon.beacon.BeaconConsumer;
+import org.altbeacon.beacon.BeaconManager;
+import org.altbeacon.beacon.RangeNotifier;
+import org.altbeacon.beacon.Region;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by DaniPunk on 04/05/16.
+ */
+public class RangingNewActivity extends Activity implements BeaconConsumer {
     protected static final String TAG = "RangingActivity";
     private BeaconManager beaconManager = BeaconManager.getInstanceForApplication(this);
     File file;
@@ -84,6 +78,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
     SharedPreferences userDetails;
     String Ukey;
     String UId;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,7 +86,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
         verifyBluetooth();
         userDetails = getApplicationContext().getSharedPreferences("PREFERENCE", MODE_PRIVATE);
         Ukey = userDetails.getString("hasKey", "");
-        UId = userDetails.getString("Userid", "");
+        UId = userDetails.getString("Userid", "Phone1");
         Log.d("PREFERENCE", Ukey);
         Log.d("PREFERENCE", UId);
 
@@ -104,6 +99,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 builder.setMessage("Please grant location access so this app can detect beacons in the background.");
                 builder.setPositiveButton(android.R.string.ok, null);
                 builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
                     @TargetApi(23)
                     @Override
                     public void onDismiss(DialogInterface dialog) {
@@ -114,7 +110,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 });
                 builder.show();
             }
-            if(this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 final AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setTitle("This app needs storage access");
                 builder.setMessage("Please grant storage access so this app can write the results in background.");
@@ -131,12 +127,14 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 });
                 builder.show();
             }
+
+
         }
 
         Date today = Calendar.getInstance().getTime();
-         final long ONE_MINUTE_IN_MILLIS=60000;//millisecs
+        final long ONE_MINUTE_IN_MILLIS = 60000;//millisecs
         Date initial;
-        for(int i=1; i<=30;i++){
+        for (int i = 1; i <= 30; i++) {
             initial = addMinutesToDate(15, today);
             Log.d("timeafter", initial.toString());
             //BeaconModel b = new BeaconModel();
@@ -145,29 +143,28 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
         }
 
-
         upload_data = new UploadBeaconData();
         upload_data.execute((Void) null);
-        file = new File(Environment.getExternalStorageDirectory(),filename);
+        file = new File(Environment.getExternalStorageDirectory(), filename);
         beaconManager.bind(this);
     }
 
-    @Override 
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         beaconManager.unbind(this);
     }
 
-    @Override 
+    @Override
     protected void onPause() {
         super.onPause();
         //upload_data.cancel(false);
         Log.d("state", "onpause");
-            if (beaconManager.isBound(this)) beaconManager.setBackgroundMode(false);
-            //RangingBeacon();
+        if (beaconManager.isBound(this)) beaconManager.setBackgroundMode(false);
+        //RangingBeacon();
     }
 
-    @Override 
+    @Override
     protected void onResume() {
         super.onResume();
         Log.d("state", "onresume");
@@ -180,45 +177,36 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
                 if (beacons.size() > 0) {
+                    System.out.println("hay beacons");
+                    Log.d("yisus","hay veacibs");
                     //beacons.iterator().next().//unicamente  Los siguientes
                     Beacon firstBeacon = beacons.iterator().next();
 
-                    String beaconid = firstBeacon.getId2().toString();
+                    String participante_id = firstBeacon.getId2().toString();
 
                     Date today = Calendar.getInstance().getTime();
                     String current_month = (String) android.text.format.DateFormat.format("MM", today);
                     String current_day = (String) android.text.format.DateFormat.format("dd", today);
                     String current_time = (String) android.text.format.DateFormat.format("HH:mm", today);
-                    Log.d("current", current_time);
-                    Log.d("current", current_month);
-                    Log.d("current", current_day);
+                    Log.d("time", current_time);
 
                     String event_month = "05";
                     String range_time = "10:00-23:00";
-                    List<String> event_days = Arrays.asList("10", "11", "12", "13");
+                    List<String> event_days = Arrays.asList("04", "05", "06", "07");
 
-
-                    final BeaconData beacon_readed = SQLite.select().from(BeaconData.class).where(BeaconData.bid.eq(beaconid)).querySingle();
-
-
+                    final BeaconModel beacon_readed = SQLite.select().from(BeaconModel.class).where(BeaconModel.bid.eq(participante_id)).querySingle();
                     //      cada beacon. debera leeer a un cierto tiempo.
                     // horas ideales de lectura del evento.   listo
                     // fecha y hora de lectura por beacon para precaucion.
-                    boolean bandera_entrada_beacon = false;
+                    Log.d("time", current_month);
+                    Log.d("time", String.valueOf(beacon_readed.getReaded()));
+                    Log.d("time", String.valueOf(checkTime(range_time)));
+                    Log.d("time", String.valueOf(event_days.contains(current_day)));
 
-                    if ((current_month.equals(event_month)) && (event_days.contains(current_day)) && checkTime(range_time)) {
-
-                        if (beacon_readed == null) {
-                            System.out.println("beacon reaedad null");
-                            bandera_entrada_beacon = true;
-                        } else if (beacon_readed.getReaded() == 0) {
-                            System.out.println("beacon reaedad 0");
-                            bandera_entrada_beacon = true;
-                        } else {
-                            System.out.println("beacon reaedad else");
-                        }
+                    if ((current_month.equals(event_month)) && (event_days.contains(current_day)) && (beacon_readed.getReaded() == 0) && checkTime(range_time)) {
 
                         System.out.println("yeaah");
+
                         Long tsLong = System.currentTimeMillis();
                         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
                         Date resultdate = new Date(tsLong);
@@ -227,24 +215,40 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                         Date date = Calendar.getInstance().getTime();
                         String fechaevento = sdf.format(date);
                         Log.d("fechaevento", fechaevento);
+                        // beacon es un participante.
+                        // telefono es un punto de control
                         logToDisplay("\n\n" + ts + " The first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away. " + fechaevento + "Time");
+                        final BeaconDataControl beaconData = SQLite.select().from(BeaconDataControl.class).where(BeaconDataControl.pid.eq(participante_id)).querySingle();
+
                         //si la hora del telefono con la hora del registro del beacon. definir una hora de rango de diferencia de un beacon en un punto con el mismo beacon en otro punto.
 
-                        //o resetear la base de datos a media noche e ir sacando los dias del evento.
 
-                            BeaconData newbeacondata = new BeaconData();
-                            newbeacondata.setBeaconid(Integer.parseInt(beaconid));
-                            newbeacondata.setUserid(UId);
+                        //o resetear la base de datos a media noche e ir sacando los dias del evento.
+                        if (beaconData == null) {
+                            Log.d("queryset", "Null");
+                            BeaconDataControl newbeacondata = new BeaconDataControl();
+                            newbeacondata.setParticipanteId(Integer.parseInt(participante_id));
+                            newbeacondata.setPhoneId(UId);
                             newbeacondata.setDate(fechaevento);
                             newbeacondata.setDistance(firstBeacon.getDistance());
                             newbeacondata.setUploaded(0);
-                            newbeacondata.setReaded(1);
                             newbeacondata.save();
+                        } else {
+                            Log.d("queryset", "Registro ya guardado");
+                            //Log.d("queryfield", String.valueOf(beaconData.getId()));
+                            //Log.d("queryfield", String.valueOf(beaconData.getBeaconid()));
+                            //Log.d("queryfield", String.valueOf(beaconData.getUserid()));
+                            //Log.d("queryfield", String.valueOf(beaconData.getDistance()));
+                            //Log.d("queryfield", beaconData.getDate());
+                            //Log.d("queryfield", String.valueOf(beaconData.getUploaded()));
+                        }
                         //SaveInFile(getApplicationContext(), "\n\n" + ts + " Beacon is " + firstBeacon.getDistance() + " mt.");
 
                     } else {
                         System.out.println("Noooo");
                     }
+                } else {
+                    System.out.println("NO hya beacons");
                 }
             }
 
@@ -252,25 +256,27 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
         try {
             beaconManager.startRangingBeaconsInRegion(new Region("myRangingUniqueId", null, null, null));
-        } catch (RemoteException e) {   }
+        } catch (RemoteException e) {
+        }
     }
 
 
     public class UploadBeaconData extends AsyncTask<Void, Void, Boolean> {
 
-        public  Boolean uploaded = false;
+        public Boolean uploaded = false;
 
-        UploadBeaconData() {}
+        UploadBeaconData() {
+        }
 
         @Override
         protected Boolean doInBackground(Void... params) {
-            while(!this.isCancelled()){
-                if(NetworkUtils.haveNetworkConnection(getApplicationContext())){
+            while (!this.isCancelled()) {
+                if (NetworkUtils.haveNetworkConnection(getApplicationContext())) {
                     //Log.d("internet", "jajajaja");
                     List<BeaconData> beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.buploaded.eq(0)).queryList();
                     Log.d("BeaconDataList", beaconData.toString());
                     try {
-                        for (BeaconData beaconitem: beaconData){
+                        for (BeaconData beaconitem : beaconData) {
                             final BeaconData bi = new Select().from(BeaconData.class).where(BeaconData.idregister.eq(beaconitem.getId())).querySingle();
                             final String userid = beaconitem.getUserid();
                             final String beaconid = String.valueOf(beaconitem.getBeaconid());
@@ -293,15 +299,14 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                                 js.put("uploaded", uploadedbeaconitem);
                                 js.put("distance", distance);
                                 js.put("date", date);
-                            }catch (JSONException e) {
+                            } catch (JSONException e) {
                                 e.printStackTrace();
                             }
-                            Log.d("js", js.toString());
 
-                            request = new JsonObjectRequest(Request.Method.POST,RALLY_MAYA_BEACONSREGISTER_JSON_API_URL,js, new Response.Listener<JSONObject>() {
+                            request = new JsonObjectRequest(Request.Method.POST, RALLY_MAYA_BEACONSREGISTER_JSON_API_URL, js, new Response.Listener<JSONObject>() {
                                 @Override
                                 public void onResponse(JSONObject response) {
-                                    Log.d("Response",response.toString());
+                                    Log.d("Response", response.toString());
                                     try {
                                         bi.setUploaded(1);
                                         bi.update();
@@ -316,11 +321,11 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                                     Log.d("request", error.toString());
                                     //alert con error
                                 }
-                            }){
+                            }) {
                                 @Override
                                 public Map<String, String> getHeaders() throws AuthFailureError {
-                                    Map<String,String> params = new HashMap<String, String>();
-                                    params.put("Content-Type","application/json; charset=utf-8");
+                                    Map<String, String> params = new HashMap<String, String>();
+                                    params.put("Content-Type", "application/json; charset=utf-8");
                                     Log.d("log", Ukey);
                                     params.put("Authorization", "Token " + Ukey);
                                     return params;
@@ -337,13 +342,11 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                         }
                         Thread.sleep(9000);
 
-                    }
-                    catch (InterruptedException ie) {
+                    } catch (InterruptedException ie) {
                         //Handle exception
                     }
 
-                }
-                else{
+                } else {
                     List<BeaconData> beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.buploaded.eq(0)).queryList();
                     Log.d("uploaded", beaconData.toString());
                     Log.d("internet", "jijijiji");
@@ -367,20 +370,21 @@ public class RangingActivity extends Activity implements BeaconConsumer {
     private void logToDisplay(final String line) {
         runOnUiThread(new Runnable() {
             public void run() {
-                TextView editText = (TextView) RangingActivity.this.findViewById(R.id.rangingText);
+                TextView editText = (TextView) RangingNewActivity.this.findViewById(R.id.rangingText);
                 editText.setMovementMethod(new ScrollingMovementMethod());
                 editText.append(line + "\n");
             }
         });
     }
-    private void SaveInFile(Context context,final String line) {
+
+    private void SaveInFile(Context context, final String line) {
 
         Log.d("FilesDir", Environment.getExternalStorageDirectory().toString());
 
         FileOutputStream outputStream;
         try {
-        //    file.createNewFile();
-            outputStream = new FileOutputStream(file,true);
+            //    file.createNewFile();
+            outputStream = new FileOutputStream(file, true);
             outputStream.write(line.getBytes());
             outputStream.close();
 
@@ -388,6 +392,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             e.printStackTrace();
         }
     }
+
     private String getDurationString(int seconds) {
 
         int hours = seconds / 3600;
@@ -396,6 +401,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
         return twoDigitString(hours) + " : " + twoDigitString(minutes) + " : " + twoDigitString(seconds);
     }
+
     private String twoDigitString(int number) {
 
         if (number == 0) {
@@ -408,7 +414,6 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
         return String.valueOf(number);
     }
-
 
 
     private void verifyBluetooth() {
@@ -428,8 +433,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 });
                 builder.show();
             }
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             final AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("Bluetooth LE not available");
             builder.setMessage("Sorry, this device does not support Bluetooth LE.");
@@ -447,6 +451,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
 
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
@@ -491,16 +496,18 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             }
         }
     }
-    public void RangingBeacon(){
+
+    public void RangingBeacon() {
 
     }
-    public void printDifference(Date startDate, Date endDate){
+
+    public void printDifference(Date startDate, Date endDate) {
 
         //milliseconds
         long different = endDate.getTime() - startDate.getTime();
 
         System.out.println("startDate : " + startDate);
-        System.out.println("endDate : "+ endDate);
+        System.out.println("endDate : " + endDate);
         System.out.println("different : " + different);
 
         long secondsInMilli = 1000;
@@ -543,7 +550,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             currentTime = Calendar.getInstance();
             currentTime.set(Calendar.HOUR_OF_DAY, Calendar.HOUR_OF_DAY);
             currentTime.set(Calendar.MINUTE, Calendar.MINUTE);
-            if(currentTime.after(fromTime) && currentTime.before(toTime)){
+            if (currentTime.after(fromTime) && currentTime.before(toTime)) {
                 return true;
             }
         } catch (Exception e) {
@@ -552,7 +559,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
         return false;
     }
 
-    private static Date addMinutesToDate(int minutes, Date beforeTime){
+    private static Date addMinutesToDate(int minutes, Date beforeTime) {
         final long ONE_MINUTE_IN_MILLIS = 60000;//millisecs
 
         long curTimeInMs = beforeTime.getTime();
