@@ -14,6 +14,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -84,6 +87,11 @@ public class RangingActivity extends Activity implements BeaconConsumer {
     SharedPreferences userDetails;
     String Ukey;
     String UId;
+    private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
+    private static final int CORE_POOL_SIZE = CPU_COUNT + 1;
+    private static final int MAXIMUM_POOL_SIZE = CPU_COUNT * 2 + 1;
+    private static final BlockingQueue<Runnable> sPoolWorkQueue =
+            new LinkedBlockingQueue<Runnable>(128);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -134,21 +142,27 @@ public class RangingActivity extends Activity implements BeaconConsumer {
         }
 
         Date today = Calendar.getInstance().getTime();
-         final long ONE_MINUTE_IN_MILLIS=60000;//millisecs
+        final long ONE_MINUTE_IN_MILLIS=60000;//millisecs
         Date initial;
-        for(int i=1; i<=30;i++){
-            initial = addMinutesToDate(15, today);
-            Log.d("timeafter", initial.toString());
-            //BeaconModel b = new BeaconModel();
-            //b.setBeaconid(i);
-            //b.save();
+//        for(int i=1; i<=30;i++){
+//            initial = addMinutesToDate(15, today);
+//            Log.d("timeafter", initial.toString());
+//            //BeaconModel b = new BeaconModel();
+//            //b.setBeaconid(i);
+//            //b.save();
+//        }
 
-        }
 
 
-        upload_data = new UploadBeaconData();
-        upload_data.execute((Void) null);
-        file = new File(Environment.getExternalStorageDirectory(),filename);
+
+        //reset_data = new ResetBeaconData();
+      //  reset_data.execute((Void) null);
+
+
+         upload_data = new UploadBeaconData();
+            upload_data.execute((Void) null);
+        //file = new File(Environment.getExternalStorageDirectory(),filename);
+
         beaconManager.bind(this);
     }
 
@@ -180,8 +194,10 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
                 if (beacons.size() > 0) {
+                    Log.d("current-beacon", beacons.toString());
                     //beacons.iterator().next().//unicamente  Los siguientes
                     Beacon firstBeacon = beacons.iterator().next();
+                    Log.d("current-beacon", firstBeacon.getId2().toString());
 
                     String beaconid = firstBeacon.getId2().toString();
 
@@ -197,7 +213,6 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     String range_time = "10:00-23:00";
                     List<String> event_days = Arrays.asList("10", "11", "12", "13");
 
-
                     final BeaconData beacon_readed = SQLite.select().from(BeaconData.class).where(BeaconData.bid.eq(beaconid)).querySingle();
 
 
@@ -206,31 +221,31 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     // fecha y hora de lectura por beacon para precaucion.
                     boolean bandera_entrada_beacon = false;
 
-                    if ((current_month.equals(event_month)) && (event_days.contains(current_day)) && checkTime(range_time)) {
+                    if(checkTime(range_time)){
+                        Log.d("fuck", "my life");
+                    }
 
+                    if ((current_month.equals(event_month)) && (event_days.contains(current_day)) && checkTime(range_time)) {
+                        Log.d("current", "FECHA CORRECTA");
                         if (beacon_readed == null) {
-                            System.out.println("beacon reaedad null");
                             bandera_entrada_beacon = true;
                         } else if (beacon_readed.getReaded() == 0) {
-                            System.out.println("beacon reaedad 0");
                             bandera_entrada_beacon = true;
-                        } else {
-                            System.out.println("beacon reaedad else");
                         }
+                        if (bandera_entrada_beacon) {
+                            Log.d("current", "BEACON READED OK");
+                            Long tsLong = System.currentTimeMillis();
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+                            Date resultdate = new Date(tsLong);
+                            String ts = sdf.format(resultdate);
+                            fechaevento.setToNow();
+                            Date date = Calendar.getInstance().getTime();
+                            String fechaevento = sdf.format(date);
+                            Log.d("fechaevento", fechaevento);
+                            logToDisplay("\n\n" + ts + " The first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away. " + fechaevento + "Time");
+                            //si la hora del telefono con la hora del registro del beacon. definir una hora de rango de diferencia de un beacon en un punto con el mismo beacon en otro punto.
 
-                        System.out.println("yeaah");
-                        Long tsLong = System.currentTimeMillis();
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-                        Date resultdate = new Date(tsLong);
-                        String ts = sdf.format(resultdate);
-                        fechaevento.setToNow();
-                        Date date = Calendar.getInstance().getTime();
-                        String fechaevento = sdf.format(date);
-                        Log.d("fechaevento", fechaevento);
-                        logToDisplay("\n\n" + ts + " The first beacon " + firstBeacon.toString() + " is about " + firstBeacon.getDistance() + " meters away. " + fechaevento + "Time");
-                        //si la hora del telefono con la hora del registro del beacon. definir una hora de rango de diferencia de un beacon en un punto con el mismo beacon en otro punto.
-
-                        //o resetear la base de datos a media noche e ir sacando los dias del evento.
+                            //o resetear la base de datos a media noche e ir sacando los dias del evento.
 
                             BeaconData newbeacondata = new BeaconData();
                             newbeacondata.setBeaconid(Integer.parseInt(beaconid));
@@ -240,10 +255,13 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                             newbeacondata.setUploaded(0);
                             newbeacondata.setReaded(1);
                             newbeacondata.save();
+                            Log.d("current", "GUARDADO TERMINADO");
                         //SaveInFile(getApplicationContext(), "\n\n" + ts + " Beacon is " + firstBeacon.getDistance() + " mt.");
-
+                        } else {
+                                Log.d("current", "BEACON READED NO");
+                        }
                     } else {
-                        System.out.println("Noooo");
+                            Log.d("current", "DATE TIME Noooo");
                     }
                 }
             }
@@ -268,7 +286,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                 if(NetworkUtils.haveNetworkConnection(getApplicationContext())){
                     //Log.d("internet", "jajajaja");
                     List<BeaconData> beaconData = SQLite.select().from(BeaconData.class).where(BeaconData.buploaded.eq(0)).queryList();
-                    Log.d("BeaconDataList", beaconData.toString());
+                    Log.d("current-BeaconDataList", beaconData.toString());
                     try {
                         for (BeaconData beaconitem: beaconData){
                             final BeaconData bi = new Select().from(BeaconData.class).where(BeaconData.idregister.eq(beaconitem.getId())).querySingle();
@@ -348,6 +366,27 @@ public class RangingActivity extends Activity implements BeaconConsumer {
                     Log.d("uploaded", beaconData.toString());
                     Log.d("internet", "jijijiji");
                 }
+                Date today = Calendar.getInstance().getTime();
+                String range_time_middle_night = "23:59-04:00";
+                if(checkTime(range_time_middle_night)){
+                    Log.d("current_time", "Ya es media noche");
+
+                    List<BeaconData> beaconData = SQLite.select().from(BeaconData.class).queryList();
+                    Log.d("current-beacondata",beaconData.toString());
+                    try {
+                        for (BeaconData beaconitem : beaconData) {
+                            beaconitem.delete();
+                            Log.d("beaconitem",beaconitem.toString());
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                else{
+                    Log.d("current_time","Aun no es media noche");
+                }
+
             }
             // TODO: register the new account here.
             return uploaded;  // cambiar a true cuando el resultado sea satisfactorio
@@ -494,37 +533,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
     public void RangingBeacon(){
 
     }
-    public void printDifference(Date startDate, Date endDate){
 
-        //milliseconds
-        long different = endDate.getTime() - startDate.getTime();
-
-        System.out.println("startDate : " + startDate);
-        System.out.println("endDate : "+ endDate);
-        System.out.println("different : " + different);
-
-        long secondsInMilli = 1000;
-        long minutesInMilli = secondsInMilli * 60;
-        long hoursInMilli = minutesInMilli * 60;
-        long daysInMilli = hoursInMilli * 24;
-
-        long elapsedDays = different / daysInMilli;
-        different = different % daysInMilli;
-
-        long elapsedHours = different / hoursInMilli;
-        different = different % hoursInMilli;
-
-        long elapsedMinutes = different / minutesInMilli;
-        different = different % minutesInMilli;
-
-        long elapsedSeconds = different / secondsInMilli;
-
-        System.out.printf(
-                "%d days, %d hours, %d minutes, %d seconds%n",
-                elapsedDays,
-                elapsedHours, elapsedMinutes, elapsedSeconds);
-
-    }
 
     public boolean checkTime(String time) {
         try {
@@ -541,8 +550,7 @@ public class RangingActivity extends Activity implements BeaconConsumer {
             toTime.set(Calendar.MINUTE, Integer.valueOf(until[1]));
 
             currentTime = Calendar.getInstance();
-            currentTime.set(Calendar.HOUR_OF_DAY, Calendar.HOUR_OF_DAY);
-            currentTime.set(Calendar.MINUTE, Calendar.MINUTE);
+            currentTime.setTime(new Date()); //
             if(currentTime.after(fromTime) && currentTime.before(toTime)){
                 return true;
             }
@@ -552,11 +560,10 @@ public class RangingActivity extends Activity implements BeaconConsumer {
         return false;
     }
 
-    private static Date addMinutesToDate(int minutes, Date beforeTime){
-        final long ONE_MINUTE_IN_MILLIS = 60000;//millisecs
 
-        long curTimeInMs = beforeTime.getTime();
-        Date afterAddingMins = new Date(curTimeInMs + (minutes * ONE_MINUTE_IN_MILLIS));
-        return afterAddingMins;
+
+
+    @Override
+    public void onBackPressed() {
     }
 }

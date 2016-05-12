@@ -8,13 +8,16 @@ android {
         applicationId "com.punkmkt.beacons"
         minSdkVersion 17
         targetSdkVersion 23
-        versionCode 1
+        versionCode 2
         versionName "1.0"
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable false
         }
     }
 }
@@ -47,13 +50,10 @@ dependencies {
     apt "com.github.Raizlabs.DBFlow:dbflow-processor:${dbflow_version}"
     compile "com.github.Raizlabs.DBFlow:dbflow-core:${dbflow_version}"
     compile "com.github.Raizlabs.DBFlow:dbflow:${dbflow_version}"
-
     // sql-cipher database encyrption (optional)
     compile "com.github.Raizlabs.DBFlow:dbflow-sqlcipher:${dbflow_version}"
-
-
-    compile 'com.android.support:appcompat-v7:23.0.0-alpha2'
-    compile 'com.android.support:design:23.0.0-alpha2'
+    compile "com.android.support:appcompat-v7:23.0.0"
+    compile 'com.android.support:design:23.0.0'
     compile 'org.altbeacon:android-beacon-library:2.+'
     compile 'com.google.android.gms:play-services:8.4.0'
     compile 'com.mcxiaoke.volley:library:1.0.19'
